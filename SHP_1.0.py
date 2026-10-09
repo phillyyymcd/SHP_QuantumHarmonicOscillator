@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import random, math
 
 #Define Parameters
+h = 0.5 #step size
 m = omega = hbar = 1.0
 N_tau = 100
 path = np.random.randn(N_tau)
@@ -10,9 +10,12 @@ beta = 10
 delta_tau = beta / N_tau
 
 #length of path is N_tau
-def local_action(path, tau, x):
+def local_action(path, tau, x, delta_tau, m, omega):
     N_tau = len(path)
 
+    # Every site needs two neighbours but the array only has indicies from
+    # 0 to N_tau-1, so the two ends would run off the array
+    # the %N wraps the values around so the periodic boundary conditions are satisfied
     left = path[(tau - 1) % N_tau]
     right = path[(tau + 1) % N_tau]
 
@@ -31,23 +34,23 @@ def local_action(path, tau, x):
     #decide whether to accept    (4)
 
 def metropolis_sweep1(path, delta_tau):
-    N_tau = len(path)
+    N_tau = len(path) #define number of elements in time lattice
 
     for i in range(N_tau):
-        tau = np.random.randint(N_tau) #(1)
-        j = np.random.uniform(-1,1)
+        tau = np.random.randint(N_tau) #(1), choosing random site to start at
+        j = np.random.uniform(-h,h) #generating the amount to change the site to
 
-        x_old = path[tau] 
+        x_old = path[tau] #defining old position in array
         x_new = x_old + j #(2)
 
-        S_old = local_action(path, tau, x_old)
-        S_new = local_action(path, tau, x_new)
+        S_old = local_action(path, tau, x_old, delta_tau, m, omega)
+        S_new = local_action(path, tau, x_new, delta_tau, m, omega)
 
-        delta_S = S_new - S_old #(3)
-        if delta_S <= 0: #(4)
+        dS = S_new - S_old #(3)
+        if dS <= 0: #(4)
             path[tau] = x_new
         else:
-            if np.random.rand() < np.exp(-delta_S):
+            if np.random.rand() < np.exp(-dS):
                 path[tau] = x_new
                 # New values that lower the action are always accepted
                 # While those that would increase the action are 
@@ -56,7 +59,7 @@ def metropolis_sweep1(path, delta_tau):
     return path
 
 # below was my first attempt at this 
-def metropolis_sweep2(path, h, m, omega):
+#def metropolis_sweep2(path, h, m, omega):
     N_tau = len(path)
     
     index = random.randint(N_tau)
