@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 #Define Parameters
 h = 0.5 #step size
 m = omega = hbar = 1.0
-N_tau = 100
+N_tau = 100 #size of the lattice
 path = np.random.randn(N_tau)
 beta = 10
 delta_tau = beta / N_tau
@@ -17,7 +17,7 @@ def local_action(path, tau, x, delta_tau, m, omega):
     # 0 to N_tau-1, so the two ends would run off the array
     # the %N wraps the values around so the periodic boundary conditions are satisfied
     left = path[(tau - 1) % N_tau]
-    right = path[(tau + 1) % N_tau]
+    right = path[(tau + 1) % N_tau] #double check modulo
 
     kinetic = (m / (2 * delta_tau) 
                * ((x - left)**2 + (right - x)**2))
@@ -33,7 +33,7 @@ def local_action(path, tau, x, delta_tau, m, omega):
     #calculate ΔS                (3)
     #decide whether to accept    (4)
 
-def metropolis_sweep1(path, delta_tau):
+def metropolis_sweep(path, delta_tau):
     N_tau = len(path) #define number of elements in time lattice
 
     for i in range(N_tau):
@@ -47,33 +47,51 @@ def metropolis_sweep1(path, delta_tau):
         S_new = local_action(path, tau, x_new, delta_tau, m, omega)
 
         dS = S_new - S_old #(3)
-        if dS <= 0: #(4)
+        if dS <= 0 or np.random.rand() < np.exp(-dS): #(4)
             path[tau] = x_new
-        else:
-            if np.random.rand() < np.exp(-dS):
-                path[tau] = x_new
                 # New values that lower the action are always accepted
                 # While those that would increase the action are 
                 # accepted with probablity exp(-delta_S)
 
     return path
 
-# below was my first attempt at this 
-#def metropolis_sweep2(path, h, m, omega):
-    N_tau = len(path)
-    
-    index = random.randint(N_tau)
+#value of x and x^2, sweep through lattice one and measure and continue, and then get the average 
+# make a plot of raw data against computer time (x^2 will oscillate around some non-zero value)
+#aim for acceptance of 60-70%, minimum cost is around there 
+#look in literature for the value of x^2 and compare the two
+#error bars, next week naive error bars variance divide by root n (n is number of sweeps), goes down with more data
+#read up of correlation functions
+#autocrrelation effects the errors (theyre not that interesting but affect thigngs
+#naive error bars and plots for x and x^2 (for a couple of parameters, check that it works)
+#autocorrelation, calculate for some operator (function of x) --> when it redues into noise, stop integrating there
+# naive error will be corrected by the autocorrelation factor  (trying to get more reliable error bars) test with operator x^2 
+#next couple of weeks, good if you make a note or two 
+#unit tests, package unit test in python which helps, helpful in figuring out what ought to be true 
 
-    for i in range(N_tau):
-        j = random.rand(-1,1)
-        tau = index[i]
-        tau_min = (tau + N_tau - 1) % N_tau
-        tau_max = (tau + 1) % N_tau 
-        x_new = path[tau] + 2*
-        S_old = local_action(path, tau, path[tau])
-        S_new = local_action(path, tau, x_new)
-        if S_new > S_old:
-            S_new = math.exp(-(S_new - S_old))
-        return S_new
+N_therm = 100 #how many of the first sweeps are discarded
+N_sweeps = 1000 #how many passes are repeated
 
+x = []
+x_2 = []
 
+for i in range(N_therm + N_sweeps):
+    total_path = metropolis_sweep(path, delta_tau)
+    x.append(np.mean(total_path))
+    x_2.append(np.mean(total_path**2))
+
+#slicing to get rid of first N_therm sweeps for thermalisation
+x_thermalised = np.array(x[N_therm:])
+x_2_thermalised = np.array(x_2[N_therm:])
+
+sweeps = np.arange(len(x))
+fig, ax = plt.subplots(1, 2, figsize=(12,5))
+ax[0].plot(sweeps, x, 'o', color="blue", markersize=2)
+ax[0].set_xlabel("Metropolis Sweeps")
+ax[0].set_ylabel("<x> value")
+
+ax[1].plot(sweeps, x_2, 'o', color="blue", markersize=2)
+ax[1].set_xlabel("Metropolis Sweeps")
+ax[1].set_ylabel("<x**2> value")
+
+plt.tight_layout()
+plt.show()
